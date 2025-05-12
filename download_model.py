@@ -48,3 +48,4 @@ for filename, url in files.items():
         print(f"✅ Скачан: {filename}")
     except Exception as e:
         print(f"❌ Ошибка при скачивании {filename}: {e}")
+        print(f"❌ Ошибка при скачивании {filename}: {e}")
