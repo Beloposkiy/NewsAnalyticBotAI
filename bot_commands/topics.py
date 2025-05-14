@@ -53,3 +53,5 @@ def extract_topics(texts_with_links: list[dict], top_n=5):
 
     print(f"✅ Темы, готовые к отображению: {len(results)}")
     return results
+
+

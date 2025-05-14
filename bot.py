@@ -1,5 +1,6 @@
 import logging
 import warnings
+import re
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
@@ -68,7 +69,42 @@ async def topics_cmd(message: types.Message):
             return
 
         # Сборка красивого сообщения с эмодзи и карточками ссылок
-        final_text = "\n\n".join(top_topics).strip()
+        text_lines = []
+        for raw in top_topics:
+            # Чистим текст от всех эмодзи, кроме тех, что вставим вручную
+            cleaned = re.sub(r'[^\w\s.,:;!?–—()\"\'«»№@/%\\-]', '', raw)
+
+            # Разбиваем по строкам
+            lines = cleaned.strip().split("\n")
+            if not lines:
+                continue
+
+            # Заголовок (первая строка)
+            header = lines[0].lstrip("•").strip()
+            header = f"📰 {header}"
+
+            # Ссылка и количество упоминаний
+            link = next((l.strip() for l in lines if "http" in l or "t.me/" in l), None)
+            count_line = next((l.strip() for l in lines if "Упоминаний" in l), None)
+
+            # Парсим число упоминаний
+            # Парсим число упоминаний
+            count_str = "0"
+            if count_line:
+                match = re.search(r"\d+", count_line)
+                if match:
+                    count_str = match.group(0)
+
+            # Сборка блока
+            entry = header
+            if link:
+                entry += f"\n🔗 {link}"
+            entry += f"\n🗣️ Упоминаний: {count_str}"
+
+            text_lines.append(entry)
+
+        final_text = "\n\n".join(text_lines).strip()
+
         logger.info(f"📨 Итоговый текст:\n{final_text}")
 
         if not final_text:
