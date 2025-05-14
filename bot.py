@@ -5,13 +5,14 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, FSInputFile
 
 from init_settings.config import BOT_TOKEN
 from bot_commands.topics import extract_topics
 from tg.reader import NewsReader
 from tg.source import SourceList
 from tg.validator import Validator
+from bot_commands.pdf_report import generate_pdf
 
 
 warnings.filterwarnings("ignore", category=UserWarning, module="torch")
@@ -71,24 +72,20 @@ async def topics_cmd(message: types.Message):
         # Сборка красивого сообщения с эмодзи и карточками ссылок
         text_lines = []
         for raw in top_topics:
-            # Чистим текст от всех эмодзи, кроме тех, что вставим вручную
             cleaned = re.sub(r'[^\w\s.,:;!?–—()\"\'«»№@/%\\-]', '', raw)
-
-            # Разбиваем по строкам
             lines = cleaned.strip().split("\n")
             if not lines:
                 continue
 
-            # Заголовок (первая строка)
+            # Заголовок
             header = lines[0].lstrip("•").strip()
             header = f"📰 {header}"
 
-            # Ссылка и количество упоминаний
+            # Ссылка
             link = next((l.strip() for l in lines if "http" in l or "t.me/" in l), None)
-            count_line = next((l.strip() for l in lines if "Упоминаний" in l), None)
 
-            # Парсим число упоминаний
-            # Парсим число упоминаний
+            # Упоминания
+            count_line = next((l.strip() for l in lines if "Упоминаний" in l), None)
             count_str = "0"
             if count_line:
                 match = re.search(r"\d+", count_line)
@@ -96,13 +93,17 @@ async def topics_cmd(message: types.Message):
                     count_str = match.group(0)
 
             # Сборка блока
-            entry = header
+            entry = f"{header}"
+            entry += f"\n🗣️ Упоминаний: {count_str}"
             if link:
                 entry += f"\n🔗 {link}"
-            entry += f"\n🗣️ Упоминаний: {count_str}"
 
-            text_lines.append(entry)
+            # Вставка невидимого символа, чтобы Telegram не цеплял ссылку
+            entry += "\n\u2063"
 
+            text_lines.append(entry.strip())
+
+        # Финальный текст
         final_text = "\n\n".join(text_lines).strip()
 
         logger.info(f"📨 Итоговый текст:\n{final_text}")
@@ -118,11 +119,44 @@ async def topics_cmd(message: types.Message):
         logger.exception("Ошибка при анализе Telegram-каналов:")
         await msg.edit_text(f"⚠️ Ошибка: {e}")
 
-
-
 @dp.message(Command("report"))
 async def report_cmd(message: types.Message):
-    await message.answer("📄 Генерация PDF-отчёта в разработке...")
+    await message.answer("📄 Генерация PDF-отчёта по темам...")
+
+    try:
+        # 1. Чтение и проверка каналов
+        reader = NewsReader()
+        await reader.init()
+
+        sources = SourceList()
+        validator = Validator(reader.client)
+        working_channels, _ = await validator.validate_telegram_channels(sources.get_telegram_channels())
+
+        all_news = []
+        for channel in working_channels:
+            messages = await reader.telegram_reader(channel, limit=30, days=1)
+            all_news.extend(messages)
+
+        if not all_news:
+            await message.answer("⚠️ Не удалось загрузить ни одной новости.")
+            return
+
+        # 2. Выделение тем
+        top_topics = extract_topics(all_news)
+        if not top_topics:
+            await message.answer("😕 Темы не были выделены.")
+            return
+
+        # 3. Генерация PDF
+        pdf_path = generate_pdf(topics=top_topics)
+
+        # 4. Отправка PDF
+        await message.answer_document(FSInputFile(pdf_path), caption="🗂 Ваш PDF-отчёт готов!")
+
+    except Exception as e:
+        logger.exception("Ошибка при генерации отчёта:")
+        await message.answer(f"❌ Ошибка при создании отчёта: {e}")
+
 
 
 @dp.message(F.text & ~F.text.startswith("/"))
@@ -138,7 +172,7 @@ async def main():
             BotCommand(command="start", description="Запустить бота"),
             BotCommand(command="topics", description="Показать главные темы"),
             BotCommand(command="sentiment", description="Проанализировать тональность новости"),
-            BotCommand(command="report", description="Создать PDF-отчёт (в разработке)"),
+            BotCommand(command="report", description="Создать PDF-отчёт"),
         ])
         logger.info("🤖 Бот запущен и готов к работе!")
         await dp.start_polling(bot)

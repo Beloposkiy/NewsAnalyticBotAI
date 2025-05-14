@@ -5,7 +5,6 @@ class SourceList:
             "tass_agency",
             "kommersant",
             "meduzalive",
-            "lentachold",
             "bbcrussian",
             "svobodaradio",
             "rt_russian",
