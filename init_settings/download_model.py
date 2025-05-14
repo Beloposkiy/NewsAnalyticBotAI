@@ -4,7 +4,7 @@ import sys
 from tqdm import tqdm
 
 # Папка, куда будет скачана модель
-MODEL_DIR = "models/rubert-sentiment"
+MODEL_DIR = "../models/rubert-sentiment"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 # Ссылки на все необходимые файлы модели

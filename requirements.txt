@@ -5,5 +5,8 @@ telethon==1.30.3
 feedparser==6.0.11
 transformers==4.40.1
 torch
-tqdm
+tqdm~=4.67.1
 rich
+requests~=2.32.3
+bertopic~=0.17.0
+reportlab~=4.4.0

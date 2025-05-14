@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
-model_path = "models/rubert-sentiment"  # локальный путь
+model_path = "../models/rubert-sentiment"  # локальный путь
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForSequenceClassification.from_pretrained(model_path)
