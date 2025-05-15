@@ -43,6 +43,7 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
         title = f"• {title}"
 
         link = next((l for l in lines if "http" in l or "t.me/" in l), "").strip()
+        link = re.sub(r"^[^\w]*", "", link)  # удалит 🔗 или любые символы до ссылки
 
         count_line = next((l for l in lines if "Упоминаний" in l), "")
         count_match = re.search(r"\d+", count_line)
@@ -56,12 +57,13 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
         html_content += f"""
         <div class="topic">
             <p>{title}<br>
-            {link}<br>
+            ➡ {link}<br>
             {mentions}<br>
             {tone_line}</p>
         </div>
         <hr>
         """
+
 
     html_content += "</body></html>"
 

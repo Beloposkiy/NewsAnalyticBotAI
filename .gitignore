@@ -11,7 +11,7 @@ env/
 # 🗃️ Файлы сессий Telethon
 *.session
 sessions/
-sentiment_session.session
+sessions/sentiment_session.session
 news_monitoring.session
 
 # 📂 Отчёты и временные HTML-файлы

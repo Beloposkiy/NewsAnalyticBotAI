@@ -1,3 +1,4 @@
+#ЗАПУСКАТЬ СТРОГО ИЗ КОНСОЛИ!!!
 from telethon.sync import TelegramClient
 from dotenv import load_dotenv
 import os
@@ -29,3 +30,5 @@ if not client.is_user_authorized():
     print("✅ Авторизация завершена!")
 else:
     print("✅ Уже авторизован!")
+
+
