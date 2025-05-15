@@ -31,7 +31,6 @@ class SentimentStates(StatesGroup):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer("👋 Привет! Я бот для анализа новостей. Используй /topics, /sentiment или /report для начала.")
-    await message.answer("👋 Привет! Я бот для анализа новостей. Используй /topics, /sentiment или /report для начала.")
 
 @dp.message(SentimentStates.waiting_for_text)
 async def process_sentiment(message: types.Message, state: FSMContext):

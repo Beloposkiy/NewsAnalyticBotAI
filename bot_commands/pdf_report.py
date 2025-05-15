@@ -50,7 +50,8 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
         mentions = f"— Упоминаний: {count}"
 
         sentiment = analyze_sentiment("\n".join(lines))
-        tone_line = f"— Тональность: {sentiment}"
+        sentiment_clean = re.sub(r"^[^A-Za-zА-Яа-яЁё]+", "", sentiment)  # удалить смайлик в начале
+        tone_line = f"— Тональность: {sentiment_clean}"
 
         html_content += f"""
         <div class="topic">
