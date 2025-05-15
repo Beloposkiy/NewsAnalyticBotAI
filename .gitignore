@@ -1,0 +1,37 @@
+# 📦 Виртуальное окружение
+.venv/
+venv/
+ENV/
+env/
+
+# 📜 Секреты и переменные среды
+.env
+*.env
+
+# 🗃️ Файлы сессий Telethon
+*.session
+sessions/
+sentiment_session.session
+news_monitoring.session
+
+# 📂 Отчёты и временные HTML-файлы
+reports/
+*.pdf
+*.html
+
+# 🧪 Тестовые файлы
+test_links_and_texts.txt
+*.log
+
+# 💻 Конфигурация IDE
+.idea/
+.vscode/
+
+# __pycache__ и байткод
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Системные файлы macOS и Windows
+.DS_Store
+Thumbs.db
