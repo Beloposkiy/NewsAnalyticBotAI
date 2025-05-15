@@ -18,13 +18,40 @@ from tg.reader import NewsReader
 from tg.source import SourceList
 from tg.validator import Validator
 from bot_commands.pdf_report import generate_pdf
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from init_settings.config import ADMIN_CHAT_ID
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher(storage=MemoryStorage())
+scheduler = AsyncIOScheduler()
 
+async def scheduled_report():
+    # Здесь можно указать ID канала или администратора
+    chat_id = ADMIN_CHAT_ID
+
+    reader = NewsReader()
+    await reader.init()
+
+    sources = SourceList()
+    validator = Validator(reader.client)
+    working_channels, _ = await validator.validate_telegram_channels(sources.get_telegram_channels())
+
+    all_news = []
+    for channel in working_channels:
+        messages = await reader.telegram_reader(channel, limit=30, days=1)
+        all_news.extend(messages)
+
+    top_topics = extract_topics(all_news)
+    if not top_topics:
+        await bot.send_message(chat_id, "⚠️ Темы не были найдены.")
+        return
+
+    pdf_path = generate_pdf(topics=top_topics)
+    await bot.send_document(chat_id, FSInputFile(pdf_path), caption="🗂 Ежедневный PDF-отчёт по темам")
 class SentimentStates(StatesGroup):
     waiting_for_text = State()
 
@@ -51,6 +78,17 @@ async def process_sentiment(message: types.Message, state: FSMContext):
 async def sentiment_cmd(message: types.Message, state: FSMContext):
     await message.answer("✍️ Введите текст, ссылку на статью или прикрепите .txt-файл со ссылками:")
     await state.set_state(SentimentStates.waiting_for_text)
+
+@dp.callback_query(F.data == "generate_pdf_from_topics")
+async def callback_generate_pdf(call: types.CallbackQuery):
+    await call.answer("⏳ Генерация PDF...")
+    text = call.message.text
+
+    # Просто разбиваем темы из сообщения (как они были выведены)
+    topics = text.split("\u2063") if "\u2063" in text else text.split("\n\n")
+
+    pdf_path = generate_pdf(topics=topics)
+    await call.message.answer_document(FSInputFile(pdf_path), caption="🖨️ PDF-версия тем из /topics")
 
 @dp.message(Command("topics"))
 async def topics_cmd(message: types.Message):
@@ -112,6 +150,12 @@ async def topics_cmd(message: types.Message):
         logger.exception("Ошибка при анализе Telegram-каналов:")
         await msg.edit_text(f"⚠️ Ошибка: {e}")
 
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🖨️ Скачать PDF-отчёт", callback_data="generate_pdf_from_topics")]
+        ])
+        await msg.edit_text(final_text, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=False)
+
+
 @dp.message(Command("report"))
 async def report_cmd(message: types.Message):
     await message.answer("📄 Генерация PDF-отчёта по темам...")
@@ -159,6 +203,11 @@ async def main():
             BotCommand(command="sentiment", description="Проанализировать тональность текста/ссылки/файла"),
             BotCommand(command="report", description="Создать PDF-отчёт"),
         ])
+
+        # 📅 Запускаем планировщик
+        scheduler.add_job(scheduled_report, trigger="cron", hour=10, minute=0)
+        scheduler.start()
+
         logger.info("🤖 Бот запущен и готов к работе!")
         await dp.start_polling(bot)
     except KeyboardInterrupt:
@@ -167,3 +216,5 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+
+
