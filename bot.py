@@ -13,11 +13,11 @@ from aiogram.fsm.context import FSMContext
 
 from init_settings.config import BOT_TOKEN
 from bot_commands.topics import extract_topics
+from bot_commands.sentiment import analyze_sentiment
 from tg.reader import NewsReader
 from tg.source import SourceList
 from tg.validator import Validator
 from bot_commands.pdf_report import generate_pdf
-from bot_commands.sentiment import analyze_sentiment, analyze_telegram_post
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,34 +28,30 @@ dp = Dispatcher(storage=MemoryStorage())
 class SentimentStates(StatesGroup):
     waiting_for_text = State()
 
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    await message.answer("👋 Привет! Я бот для анализа новостей. Используй /topics, /sentiment или /report для начала.")
+    await message.answer("👋 Привет! Я бот для анализа новостей. Используй /topics, /sentiment или /report для начала.")
+
 @dp.message(SentimentStates.waiting_for_text)
 async def process_sentiment(message: types.Message, state: FSMContext):
     result = "⚠️ Не удалось обработать сообщение."
 
-    # 📌 Пересланный пост
     if message.forward_from_chat and message.text:
         result = analyze_sentiment(message.text.strip())
-
-    # 🌐 Ссылка на Telegram-пост
     elif message.text and message.text.startswith("http") and "t.me" in message.text:
+        from bot_commands.sentiment import analyze_telegram_post
         result = await analyze_telegram_post(message.text.strip())
-
-    # ✍️ Обычный текст
     elif message.text:
         result = analyze_sentiment(message.text.strip())
 
     await message.answer(f"📊 Результат анализа:\n{result}")
     await state.clear()
 
-
 @dp.message(Command("sentiment"))
 async def sentiment_cmd(message: types.Message, state: FSMContext):
     await message.answer("✍️ Введите текст, ссылку на статью или прикрепите .txt-файл со ссылками:")
     await state.set_state(SentimentStates.waiting_for_text)
-
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer("👋 Привет! Я бот для анализа новостей. Используй /topics, /sentiment или /report для начала.")
 
 @dp.message(Command("topics"))
 async def topics_cmd(message: types.Message):
@@ -101,9 +97,12 @@ async def topics_cmd(message: types.Message):
                 match = re.search(r"\d+", count_line)
                 if match:
                     count_str = match.group(0)
-            entry = f"{header}\n🗣️ Упоминаний: {count_str}"
+            sentiment = analyze_sentiment("\n".join(lines))
+            entry = f"{header}"
             if link:
                 entry += f"\n🔗 {link}"
+            entry += f"\n🗣️ Упоминаний: {count_str}"
+            entry += f"\n🧠 Тональность: {sentiment}"
             entry += "\n⁣"
             text_lines.append(entry.strip())
 

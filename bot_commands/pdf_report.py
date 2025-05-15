@@ -2,6 +2,7 @@ import os
 import re
 import pdfkit
 from datetime import datetime
+from bot_commands.sentiment import analyze_sentiment
 
 def generate_pdf(topics: list[str], filename: str = None) -> str:
     now = datetime.now()
@@ -38,24 +39,25 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
         if not lines:
             continue
 
-        # Заголовок — первая строка, без эмодзи
         title = re.sub(r"[^\w\s.,:;!?–—()\"\'«»№@/%\\-]", "", lines[0]).strip()
         title = f"• {title}"
 
-        # Ссылка — отдельной строкой
         link = next((l for l in lines if "http" in l or "t.me/" in l), "").strip()
 
-        # Упоминания — с длинным тире
         count_line = next((l for l in lines if "Упоминаний" in l), "")
         count_match = re.search(r"\d+", count_line)
         count = count_match.group(0) if count_match else "0"
         mentions = f"— Упоминаний: {count}"
 
+        sentiment = analyze_sentiment("\n".join(lines))
+        tone_line = f"— Тональность: {sentiment}"
+
         html_content += f"""
         <div class="topic">
             <p>{title}<br>
             {link}<br>
-            {mentions}</p>
+            {mentions}<br>
+            {tone_line}</p>
         </div>
         <hr>
         """
