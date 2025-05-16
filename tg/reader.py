@@ -16,23 +16,14 @@ class NewsReader:
         if not await self.client.is_user_authorized():
             raise RuntimeError("\u274c Не авторизован TelegramClient. Запусти auth_tg.py.")
 
-    async def telegram_reader(self, channel_username: str, limit=50, days=1):
+    async def telegram_reader(self, channel_username: str, limit=100, days=1):
         messages = []
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         async with self.client:
             try:
-                result = await self.client(GetHistoryRequest(
-                    peer=channel_username,
-                    limit=limit,
-                    offset_date=None,
-                    offset_id=0,
-                    max_id=0,
-                    min_id=0,
-                    add_offset=0,
-                    hash=0
-                ))
-                for message in result.messages:
+                result = await self.client.get_messages(channel_username, limit=100)
+                for message in result:
                     if (message.message
                             and message.date >= cutoff_date
                             and not self._is_noise(message.message)):
@@ -42,7 +33,6 @@ class NewsReader:
                         })
             except Exception as e:
                 print(f"❌ Ошибка при получении новостей из @{channel_username}: {e}")
-
         return messages
 
     def _is_noise(self, text):

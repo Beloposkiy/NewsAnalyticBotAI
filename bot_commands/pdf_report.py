@@ -1,10 +1,11 @@
-import os
 import re
-import pdfkit
-from datetime import datetime
 from bot_commands.sentiment import analyze_sentiment
 
-def generate_pdf(topics: list[str], filename: str = None) -> str:
+def generate_pdf(topics: list[str], filename: str = None, title: str = "Отчёт по темам") -> str:
+    from datetime import datetime
+    import os
+    import pdfkit
+
     now = datetime.now()
     formatted_date = now.strftime("%d.%m.%Y")
     timestamp = now.strftime("%d.%m.%Y %H:%M")
@@ -21,14 +22,14 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Отчёт по новостям</title>
+        <title>{title}</title>
         <style>
             body {{ font-family: sans-serif; font-size: 14px; }}
             .topic {{ margin-bottom: 20px; }}
         </style>
     </head>
     <body>
-        <h2>Отчёт по ключевым темам</h2>
+        <h2>{title}</h2>
         <p>Сформировано: {timestamp}</p>
         <hr>
     """
@@ -39,31 +40,28 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
         if not lines:
             continue
 
-        title = re.sub(r"[^\w\s.,:;!?–—()\"\'«»№@/%\\-]", "", lines[0]).strip()
-        title = f"• {title}"
+        title_line = re.sub(r"[^\w\s.,:;!?–—()\"\'«»№@/%\\-]", "", lines[0]).strip()
+        title_line = f"• {title_line}"
 
         link = next((l for l in lines if "http" in l or "t.me/" in l), "").strip()
-        link = re.sub(r"^[^\w]*", "", link)  # удалит 🔗 или любые символы до ссылки
-
         count_line = next((l for l in lines if "Упоминаний" in l), "")
         count_match = re.search(r"\d+", count_line)
         count = count_match.group(0) if count_match else "0"
         mentions = f"— Упоминаний: {count}"
 
         sentiment = analyze_sentiment("\n".join(lines))
-        sentiment_clean = re.sub(r"^[^A-Za-zА-Яа-яЁё]+", "", sentiment)  # удалить смайлик в начале
+        sentiment_clean = re.sub(r"^[^A-Za-zА-Яа-яЁё]+", "", sentiment)
         tone_line = f"— Тональность: {sentiment_clean}"
 
         html_content += f"""
         <div class="topic">
-            <p>{title}<br>
+            <p>{title_line}<br>
             ➡ {link}<br>
             {mentions}<br>
             {tone_line}</p>
         </div>
         <hr>
         """
-
 
     html_content += "</body></html>"
 
@@ -82,3 +80,4 @@ def generate_pdf(topics: list[str], filename: str = None) -> str:
 
     pdfkit.from_file(html_path, pdf_path, options=options)
     return pdf_path
+

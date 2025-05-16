@@ -21,7 +21,7 @@ def extract_topics(texts_with_links: list[dict], top_n=5):
     print(topic_info)
 
     # Можно отключить фильтр, если нужно увидеть все темы, включая -1
-    filtered = topic_info.head(top_n)
+    filtered = topic_info[topic_info.Topic != -1].sort_values("Count", ascending=False)
     print("🔎 Отфильтрованные темы:")
     print(filtered)
 
