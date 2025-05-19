@@ -15,7 +15,7 @@ def generate_pdf(topics: list[str], filename: str = None, title: str = "Отчё
 
     output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "reports"))
     os.makedirs(output_dir, exist_ok=True)
-    html_path = os.path.join(output_dir, f"temp_{formatted_date}.html")
+    html_path = os.path.join(output_dir, f"news_{formatted_date}_report.html")
     pdf_path = os.path.join(output_dir, filename)
 
     html_content = f"""
@@ -56,7 +56,7 @@ def generate_pdf(topics: list[str], filename: str = None, title: str = "Отчё
         html_content += f"""
         <div class="topic">
             <p>{title_line}<br>
-            ➡ {link}<br>
+            {link}<br>
             {mentions}<br>
             {tone_line}</p>
         </div>
@@ -78,6 +78,8 @@ def generate_pdf(topics: list[str], filename: str = None, title: str = "Отчё
         "margin-right": "15mm",
     }
 
-    pdfkit.from_file(html_path, pdf_path, options=options)
+    config = pdfkit.configuration(wkhtmltopdf="/usr/local/bin/wkhtmltopdf")
+    pdfkit.from_file(html_path, pdf_path, options=options, configuration=config)
+
     return pdf_path
 

@@ -87,7 +87,14 @@ def format_topic_block(raw: str) -> str:
 
     link = next((l for l in lines if "http" in l), "")
     count = next((l for l in lines if "Упоминаний" in l), "")
-    sentiment = analyze_sentiment(this)
+
+    # Формируем текст для анализа тональности
+    sentiment_input = "\n".join([
+        line for line in lines
+        if all(x not in line.lower() for x in ["http", "тональность", "упоминаний", "🔗", "➡", "🧠"])
+    ])
+
+    sentiment = analyze_sentiment(sentiment_input)
 
     result = header
     if link:
