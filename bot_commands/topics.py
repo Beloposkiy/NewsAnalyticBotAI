@@ -1,6 +1,6 @@
 from bertopic import BERTopic
+from datetime import datetime
 
-# Инициализация модели
 topic_model = BERTopic(language="multilingual", min_topic_size=2, verbose=True)
 
 def extract_topics(texts_with_links: list[dict], top_n=5):
@@ -8,50 +8,54 @@ def extract_topics(texts_with_links: list[dict], top_n=5):
         print("❌ Нет входных данных для анализа.")
         return []
 
-    # Заголовки новостей
     texts = [item["title"] for item in texts_with_links]
     print(f"📥 Получено {len(texts)} текстов для анализа.")
 
-    # Тематическое моделирование
     topics, _ = topic_model.fit_transform(texts)
-
-    # Информация о выделенных темах
     topic_info = topic_model.get_topic_info()
-    print("📊 Информация о темах:")
-    print(topic_info)
-
-    # Можно отключить фильтр, если нужно увидеть все темы, включая -1
     filtered = topic_info[topic_info.Topic != -1].sort_values("Count", ascending=False)
-    print("🔎 Отфильтрованные темы:")
-    print(filtered)
-
-    # Репрезентативные документы
     topic_representatives = topic_model.get_representative_docs()
 
     results = []
+
     for _, row in filtered.iterrows():
         topic_id = row["Topic"]
         try:
             example_text = topic_representatives[topic_id][0].strip()
         except (IndexError, KeyError):
-            example_text = "(нет примера)"
-        else:
-            example_text = example_text[0].upper() + example_text[1:]
+            continue
 
-        # Поиск ссылки
-        link = next(
-            (item["url"] for item in texts_with_links
-             if item["title"].strip() in example_text or example_text in item["title"].strip()),
+        example_text_norm = example_text.lower()
+
+        matched_item = next(
+            (item for item in texts_with_links
+             if item["title"].lower().strip() in example_text_norm
+             or example_text_norm in item["title"].lower().strip()),
             None
         )
 
-        entry = f"• {example_text}"
-        if link:
-            entry += f"\n➡ {link}"
-        entry += f"\n— Упоминаний: {row['Count']}"
-        results.append(entry)
+        if not matched_item:
+            continue
+
+        url = matched_item.get("url", "")
+        created_at_dt = matched_item.get("created_at")
+
+        if isinstance(created_at_dt, datetime):
+            created_at_str = created_at_dt.strftime("%d.%m.%Y")
+        elif isinstance(created_at_dt, str):
+            created_at_str = created_at_dt
+        else:
+            created_at_str = ""
+
+        results.append({
+            "title": example_text,
+            "url": url,
+            "mentions": int(row["Count"]),
+            "created_at": created_at_str
+        })
+
+        if len(results) >= top_n:
+            break
 
     print(f"✅ Темы, готовые к отображению: {len(results)}")
     return results
-
-

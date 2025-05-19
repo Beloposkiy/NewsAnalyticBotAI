@@ -1,8 +1,9 @@
-from aiogram.types import FSInputFile
 from transformers import pipeline
+from bot_commands.constants import CANDIDATE_LABELS
+from aiogram.types import FSInputFile
 
 from shared import bot
-from bot_commands.pdf_report import generate_pdf
+from bot_commands.utils import generate_pdf
 from bot_commands.topics import extract_topics
 from init_settings.config import ADMIN_CHAT_ID
 from tg.reader import NewsReader
@@ -12,34 +13,9 @@ from tg.validator import Validator
 # Инициализация zero-shot классификатора
 classifier = pipeline("zero-shot-classification", model="MoritzLaurer/deberta-v3-base-zeroshot-v1")
 
-CANDIDATE_LABELS = [
-    "политика",
-    "экономика",
-    "технологии",
-    "культура",
-]
-
-CATEGORY_EN = {
-    "политика": "politics",
-    "экономика": "economy",
-    "технологии": "technology",
-    "культура": "culture",
-    "общие": "all"
-}
-
-CATEGORY_PDF_TITLES = {
-    "политика": "политическим постам",
-    "экономика": "экономическим постам",
-    "технологии": "технологическим постам",
-    "культура": "культурным постам",
-    "общие": "всем постам"
-}
-
-
 def classify_topic(text: str) -> str:
     result = classifier(text, CANDIDATE_LABELS, multi_label=False)
     return result["labels"][0]
-
 
 async def scheduled_report():
     chat_id = ADMIN_CHAT_ID

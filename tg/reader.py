@@ -27,9 +27,11 @@ class NewsReader:
                     if (message.message
                             and message.date >= cutoff_date
                             and not self._is_noise(message.message)):
+
                         messages.append({
                             "title": message.message.strip()[:150],
-                            "url": f"https://t.me/{channel_username}/{message.id}"
+                            "url": f"https://t.me/{channel_username}/{message.id}",
+                            "created_at": message.date.astimezone()  # ✅ сохраняем как datetime
                         })
             except Exception as e:
                 print(f"❌ Ошибка при получении новостей из @{channel_username}: {e}")
