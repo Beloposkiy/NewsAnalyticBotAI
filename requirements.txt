@@ -4,6 +4,13 @@ python-dotenv==1.0.0
 telethon==1.30.3
 feedparser==6.0.11
 transformers==4.40.1
-torch
-tqdm
+torch~=2.1.2
+tqdm~=4.67.1
 rich
+requests~=2.32.3
+bertopic~=0.17.0
+reportlab~=4.4.0
+numpy~=1.26.4
+pdfkit~=1.0.0
+newspaper3k~=0.2.8
+APScheduler~=3.11.0
