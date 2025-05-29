@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/reports" />
       <excludeFolder url="file://$MODULE_DIR$/sessions" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9 (NewsAnaliticBotAI)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.9 (NewsAnalyticBotAI)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

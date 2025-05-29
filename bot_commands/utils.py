@@ -1,11 +1,18 @@
 import os
 import pdfkit
+import logging
+import unicodedata
+
+from bot_commands.sentiment import analyze_sentiment
+import re
 
 from datetime import datetime
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot_commands.constants import CANDIDATE_LABELS, CATEGORY_PDF_TITLES, CATEGORY_EN
+from dotenv import load_dotenv
+load_dotenv()
 
 emoji_map = {
     "политика": "🏛️",
@@ -39,26 +46,9 @@ def get_dynamic_period_buttons(current: int, back_cb: str):
         [InlineKeyboardButton(text="🔙 Назад", callback_data=back_cb)]
     ])
 
-def strip_emojis(text: str) -> str:
-    emoji_pattern = re.compile(
-        "["
-        u"\U0001F600-\U0001F64F"
-        u"\U0001F300-\U0001F5FF"
-        u"\U0001F680-\U0001F6FF"
-        u"\U0001F1E0-\U0001F1FF"
-        u"\u2600-\u26FF"
-        u"\u2700-\u27BF"
-        "]+", flags=re.UNICODE
-    )
-    return emoji_pattern.sub(r'', text).strip()
-
-
-from bot_commands.sentiment import analyze_sentiment
-import re
-
 
 def format_topic_block(topic: dict, for_pdf: bool = False) -> str:
-    title = topic.get("title", "").strip()
+    title = clean_and_trim(topic.get("title", "").strip(), max_length=200)
     url = topic.get("url", "")
     mentions = topic.get("mentions", 0)
     created_at = topic.get("created_at", "")
@@ -128,7 +118,7 @@ def generate_pdf(topics: list[dict], filename: str = None,
     """
 
     for topic in topics:
-        title_line = topic.get("title", "").strip()
+        title_line = clean_and_trim(topic.get("title", "").strip(), max_length=200)
         url = topic.get("url", "").strip()
         mentions = topic.get("mentions", 0)
         created_at = topic.get("created_at", "")
@@ -162,7 +152,33 @@ def generate_pdf(topics: list[dict], filename: str = None,
         "margin-right": "15mm",
     }
 
-    config = pdfkit.configuration(wkhtmltopdf="/usr/local/bin/wkhtmltopdf")
+    wkhtmltopdf_path = os.getenv("WKHTMLTOPDF_PATH",
+                                 "/usr/local/bin/wkhtmltopdf")  # значение по умолчанию для Linux/macOS
+    config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
     pdfkit.from_file(html_path, pdf_path, options=options, configuration=config)
 
     return pdf_path
+
+def log_user_action(user_id: int, username: str, full_name: str, action: str):
+    logging.info(f"[USER] {full_name} (@{username}, ID: {user_id}) — {action}")
+
+
+def clean_and_trim(text: str, max_length: int = 200) -> str:
+    # Удаление emoji
+    emoji_pattern = re.compile(
+        "[" +
+        u"\U0001F600-\U0001F64F" +  # смайлики
+        u"\U0001F300-\U0001F5FF" +  # символы природы, объектов
+        u"\U0001F680-\U0001F6FF" +  # транспорт
+        u"\U0001F1E0-\U0001F1FF" +  # флаги
+        u"\u2600-\u26FF" +          # символы разное
+        u"\u2700-\u27BF" +          # стрелки и прочее
+        "]+", flags=re.UNICODE
+    )
+    text = emoji_pattern.sub('', text)
+
+    # Удаление символа замены и управляющих символов
+    text = text.replace('\uFFFD', '')  # символ �
+    text = ''.join(c for c in text if unicodedata.category(c)[0] != 'C')
+
+    return text.strip()[:max_length]

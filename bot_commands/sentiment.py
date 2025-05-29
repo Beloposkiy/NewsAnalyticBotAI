@@ -1,10 +1,14 @@
 import re
+import unicodedata
 import torch
 import numpy as np
+import logging
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from telethon import TelegramClient
 from telethon.errors import MessageIdInvalidError
 from init_settings.config import api_id, api_hash, session_path
+
+logger = logging.getLogger(__name__)
 
 # === Основная модель: Blanchefort (точнее, но тяжелее) ===
 base_model_name = "blanchefort/rubert-base-cased-sentiment"
@@ -20,7 +24,26 @@ fallback_model = AutoModelForSequenceClassification.from_pretrained(fallback_mod
 # === Ключевые слова для ручной коррекции ===
 NEGATIVE_KEYWORDS = ["провал", "разочарование", "санкци", "не будет", "отказ", "авария", "снизился"]
 
-# === Анализ с основной моделью ===
+def clean_and_trim(text: str, max_length: int = 200) -> str:
+    # Удаление emoji
+    emoji_pattern = re.compile(
+        "[" +
+        u"\U0001F600-\U0001F64F" +
+        u"\U0001F300-\U0001F5FF" +
+        u"\U0001F680-\U0001F6FF" +
+        u"\U0001F1E0-\U0001F1FF" +
+        u"\u2600-\u26FF" +
+        u"\u2700-\u27BF" +
+        "]+", flags=re.UNICODE
+    )
+    text = emoji_pattern.sub('', text)
+
+    # Удаление символа замены и управляющих символов
+    text = text.replace('\uFFFD', '')  # символ �
+    text = ''.join(c for c in text if unicodedata.category(c)[0] != 'C')
+
+    return text.strip()[:max_length]
+
 def run_model(text: str, tokenizer, model) -> tuple[str, float]:
     inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
     with torch.no_grad():
@@ -29,18 +52,18 @@ def run_model(text: str, tokenizer, model) -> tuple[str, float]:
     top = int(np.argmax(probs))
     return labels[top], probs[top]
 
-# === Главная функция анализа ===
 def analyze_sentiment(text: str) -> str:
     try:
-        label, score = run_model(text, base_tokenizer, base_model)
+        text_lower = text.lower()
+        # Ручная эвристика
+        if any(word in text_lower for word in NEGATIVE_KEYWORDS):
+            return "😠 Негативная (по ключевым словам)"
 
-        # Если уверенность низкая — подключаем fallback-модель
+        label, score = run_model(text, base_tokenizer, base_model)
         if score < 0.75:
             label, score = run_model(text, fallback_tokenizer, fallback_model)
 
-        # Ручная коррекция: если слово негативное, а метка нейтральная
-        lowered = text.lower()
-        if label == "neutral" and any(word in lowered for word in NEGATIVE_KEYWORDS):
+        if label == "neutral" and any(word in text_lower for word in NEGATIVE_KEYWORDS):
             label = "negative"
 
         if label == "positive":
@@ -50,13 +73,13 @@ def analyze_sentiment(text: str) -> str:
         elif label == "negative":
             return f"😠 Негативная ({score:.2f})"
         else:
-            return f"🤷 Не удалось определить"
+            return "🤷 Не удалось определить"
     except Exception as e:
-        return f"⚠️ Ошибка анализа: {e}"
+        logger.error(f"Ошибка анализа тональности: {e}")
+        return "⚠️ Ошибка анализа тональности"
 
-# === Асинхронное извлечение текста из Telegram-поста ===
 async def extract_text_from_telegram(url: str) -> str:
-    match = re.match(r"https?://t\.me/([\w\d_]+)/([0-9]+)", url)
+    match = re.match(r"https?://t\.me/(\w+)/(\d+)", url)
     if not match:
         return "⚠️ Неверная ссылка на Telegram-пост."
 
@@ -66,15 +89,37 @@ async def extract_text_from_telegram(url: str) -> str:
     try:
         async with TelegramClient(session_path, api_id, api_hash) as client:
             message = await client.get_messages(channel_username, ids=msg_id)
-            return message.text.strip() if message and message.text else "[Пост пуст или недоступен]"
+            if not message:
+                return "[⛔ Сообщение не найдено]"
+
+            parts = []
+            for attr in ('message', 'caption', 'text', 'raw_text'):
+                val = getattr(message, attr, None)
+                if val and isinstance(val, str) and val.strip():
+                    parts.append(val.strip())
+
+            # Удаляем дубликаты и объединяем
+            seen = set()
+            unique_parts = []
+            for part in parts:
+                if part not in seen:
+                    unique_parts.append(part)
+                    seen.add(part)
+
+            combined_text = "\n\n".join(unique_parts)
+            logger.info(f"[Извлечённый текст Telegram-поста]: {combined_text}")
+            return combined_text if combined_text else "[Пост пуст или содержит только медиа]"
+
     except MessageIdInvalidError:
         return "[⛔ Сообщение не найдено]"
     except Exception as e:
+        logger.warning(f"[Ошибка доступа к Telegram]: {e}")
         return f"[⚠️ Ошибка доступа к Telegram: {e}]"
 
-# === Обёртка для анализа по ссылке ===
 async def analyze_telegram_post(url: str) -> str:
-    text = await extract_text_from_telegram(url)
-    if text.startswith("[") or text.startswith("⚠️"):
-        return text
-    return analyze_sentiment(text)
+    full_text = await extract_text_from_telegram(url)
+    cleaned_text = clean_and_trim(full_text)
+    logger.info(f"[Очищенный текст для анализа]: {cleaned_text}")
+    if cleaned_text.startswith("[") or cleaned_text.startswith("⚠️"):
+        return cleaned_text
+    return analyze_sentiment(cleaned_text)

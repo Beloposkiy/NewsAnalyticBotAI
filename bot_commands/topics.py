@@ -1,6 +1,8 @@
 from bertopic import BERTopic
 from datetime import datetime
+import warnings
 
+warnings.filterwarnings("ignore", category=FutureWarning, module="huggingface_hub")
 topic_model = BERTopic(language="multilingual", min_topic_size=2, verbose=True)
 
 def extract_topics(texts_with_links: list[dict], top_n=5):
