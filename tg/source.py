@@ -1,7 +1,8 @@
 class SourceList:
     def __init__(self):
         self.telegram = [
-            "rbc_news"
+            "rbc_news",
+            "no_name_tg"
         ]
 
     def get_telegram_channels(self):

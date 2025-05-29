@@ -1,5 +1,4 @@
 from telethon import TelegramClient
-from telethon.tl.functions.messages import GetHistoryRequest
 from datetime import datetime, timedelta, timezone
 from init_settings.config import api_id, api_hash
 import os
@@ -22,22 +21,22 @@ class NewsReader:
 
         async with self.client:
             try:
-                result = await self.client.get_messages(channel_username, limit=100)
+                result = await self.client.get_messages(channel_username, limit=limit)
                 for message in result:
                     if (message.message
                             and message.date >= cutoff_date
                             and not self._is_noise(message.message)):
-
                         messages.append({
-                            "title": message.message.strip()[:150],
+                            "title": message.message.strip(),
                             "url": f"https://t.me/{channel_username}/{message.id}",
-                            "created_at": message.date.astimezone()  # ✅ сохраняем как datetime
+                            "created_at": message.date.astimezone()
                         })
             except Exception as e:
                 print(f"❌ Ошибка при получении новостей из @{channel_username}: {e}")
         return messages
 
-    def _is_noise(self, text):
+    @staticmethod
+    def _is_noise(text):
         mentions = text.count("@")
         links = text.count("http")
         if mentions >= 3 and links == 0:
