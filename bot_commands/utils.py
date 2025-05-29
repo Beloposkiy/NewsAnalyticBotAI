@@ -152,8 +152,7 @@ def generate_pdf(topics: list[dict], filename: str = None,
         "margin-right": "15mm",
     }
 
-    wkhtmltopdf_path = os.getenv("WKHTMLTOPDF_PATH",
-                                 "/usr/local/bin/wkhtmltopdf")  # значение по умолчанию для Linux/macOS
+    wkhtmltopdf_path = os.getenv("WKHTMLTOPDF_PATH")  # значение по умолчанию для Linux/macOS
     config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
     pdfkit.from_file(html_path, pdf_path, options=options, configuration=config)
 
