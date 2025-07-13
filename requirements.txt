@@ -1,5 +1,5 @@
-# Use Python 3.9
-python_version == 3.9
+# Для информации: проект рассчитан на Python 3.9
+# Убедитесь, что используете Python версии 3.9
 
 aiogram>=3.0
 telethon>=1.33
