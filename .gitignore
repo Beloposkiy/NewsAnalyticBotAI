@@ -1,37 +1,47 @@
-# 📦 Виртуальное окружение
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Виртуальное окружение
 .venv/
 venv/
-ENV/
 env/
+ENV/
+env.bak/
+venv.bak/
 
-# 📜 Секреты и переменные среды
+# Логи
+*.log
+
+# Файлы настроек IDE
+.vscode/
+.idea/
+
+# Конфигурационные файлы
 .env
 *.env
 
-# 🗃️ Файлы сессий Telethon
-*.session
-sessions/
-sessions/sentiment_session.session
-news_monitoring.session
+# Файлы отчетов, сборок, пакетов
+dist/
+build/
+*.egg-info/
 
-# 📂 Отчёты и временные HTML-файлы
+# WeasyPrint output
 reports/
 *.pdf
 *.html
 
-# 🧪 Тестовые файлы
-test_links_and_texts.txt
-*.log
+# Byte-compiled / optimized / DLL files
+*.so
+*.dylib
+*.dll
 
-# 💻 Конфигурация IDE
-.idea/
-.vscode/
-
-# __pycache__ и байткод
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Системные файлы macOS и Windows
+# macOS
 .DS_Store
-Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# pytest cache
+.pytest_cache/
