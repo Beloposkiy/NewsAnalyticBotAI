@@ -3,8 +3,8 @@ from config.logger import logger
 
 models = {
     "category_classifier_1": "cointegrated/rubert-tiny2-cedr-emotion-detection",
-    "category_classifier_2": "apanc/russian-sensitive-topics",
-    "sentiment_classifier_1": "sismetanin/rubert-ru-sentiment-rusentiment",
+    "category_classifier": "apanc/russian-sensitive-topics",
+    "sentiment_classifier": "sismetanin/rubert-ru-sentiment-rusentiment",
     "sentiment_classifier_2": "seara/rubert-tiny2-russian-sentiment",
 }
 

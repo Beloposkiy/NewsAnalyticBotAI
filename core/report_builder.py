@@ -38,14 +38,24 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
+def remove_links(text: str) -> str:
+    """
+    Удаляет все ссылки из текста, включая http, https и похожие паттерны.
+    """
+    # Паттерн для ссылок
+    url_pattern = re.compile(r"https?://\S+|https?\S+", flags=re.IGNORECASE)
+    return url_pattern.sub("", text)
+
+
 def extract_first_paragraph(text: str) -> str:
-    """Возвращает первый непустой абзац из очищенного текста."""
+    """Возвращает первый непустой абзац из очищенного и очищенного от ссылок текста."""
     paragraphs = text.split('\n')
     for p in paragraphs:
-        p_clean = clean_text(p.strip())
+        p_clean = clean_text(remove_links(p.strip()))
         if p_clean:
             return p_clean
-    return clean_text(text.strip())
+    # Если нет непустых абзацев, очищаем весь текст
+    return clean_text(remove_links(text.strip()))
 
 
 def build_html_report(news: list, period: str, category: str) -> str:
@@ -88,7 +98,8 @@ def build_html_report(news: list, period: str, category: str) -> str:
         sentiment_str = SENTIMENT_LABELS.get(sentiment_raw, n.get('sentiment', 'неизвестна'))
 
         text_raw = n.get('text', '')
-        text_clean = clean_text(text_raw).replace('\n', '<br>')
+        # Вместо полного текста выводим только первый абзац без ссылок
+        text_clean = extract_first_paragraph(text_raw).replace('\n', '<br>')
 
         items += (
             f"<div style='margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;'>"
@@ -117,7 +128,8 @@ def build_html_report(news: list, period: str, category: str) -> str:
     </html>
     """
 
-    filename_html = f"reports/posts_{datetime.now():%Y_%m_%d}_report.html"
+    safe_category = category.replace(" ", "_").lower()
+    filename_html = f"reports/posts_{datetime.now():%Y_%m_%d}_report_{safe_category}.html"
     with open(filename_html, "w", encoding="utf-8") as f:
         f.write(html)
     logger.info(f"HTML отчет сохранён: {filename_html}")

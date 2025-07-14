@@ -4,5 +4,5 @@ channels:
 #  - rt_russian
 #  - tass_agency
 #  - kommersant
-#  - ria_news
+  - ria56_news
   - vedomosti
